@@ -1,5 +1,7 @@
 module TypeDecoder (
    output reg         dec_type_vld
+  ,output reg  [11:0] dec_csr_addr // CSR
+  ,output reg  [31:0] dec_csr_imm  // CSR
   ,output wire        rs1_ren
   ,output wire        rs2_ren
   ,output reg         rd_wen
@@ -11,6 +13,7 @@ module TypeDecoder (
   ,output reg  [ 4:0] rs1   
   ,output reg  [ 4:0] rs2_p
   ,output reg  [ 4:0] rs1_p
+  ,output reg  [ 4:0] rd_p
   ,output reg  [ 2:0] funct3
   ,output reg  [ 2:0] funct3_p
   ,output reg  [ 4:0] rd    
@@ -28,6 +31,9 @@ module TypeDecoder (
   ,output wire        is_SYSTEM
   , input             dec_freeze
   , input             alu_flush
+  , input             nop_insert
+// CSR Hazard (Atomic)
+  , input             csr_hazard
   , input      [31:0] inst
   , input             inst_vld
   , input             CLK
@@ -46,15 +52,15 @@ assign  is_STORE    = inst_vld & (inst[6:0] == `INST_STORE   );
 assign  is_MISC_MEM = inst_vld & (inst[6:0] == `INST_MISC_MEM);
 assign  is_SYSTEM   = inst_vld & (inst[6:0] == `INST_SYSTEM  );
 
-wire r_type_inst = ~alu_flush & ~dec_freeze & (is_OP                        );
-wire i_type_inst = ~alu_flush & ~dec_freeze & (is_OP_IMM | is_JALR | is_LOAD);
-wire s_type_inst = ~alu_flush & ~dec_freeze & (is_STORE                     );
-wire b_type_inst = ~alu_flush & ~dec_freeze & (is_BRANCH                    );
-wire u_type_inst = ~alu_flush & ~dec_freeze & (is_LUI | is_AUIPC            );
-wire j_type_inst = ~alu_flush & ~dec_freeze & (is_JAL                       );
+wire r_type_inst = ~nop_insert & ~alu_flush & ~csr_hazard & ~dec_freeze & (is_OP                        );
+wire i_type_inst = ~nop_insert & ~alu_flush & ~csr_hazard & ~dec_freeze & (is_OP_IMM | is_JALR | is_LOAD 
+                                                                           | is_SYSTEM                  );
+wire s_type_inst = ~nop_insert & ~alu_flush & ~csr_hazard & ~dec_freeze & (is_STORE                     );
+wire b_type_inst = ~nop_insert & ~alu_flush & ~csr_hazard & ~dec_freeze & (is_BRANCH                    );
+wire u_type_inst = ~nop_insert & ~alu_flush & ~csr_hazard & ~dec_freeze & (is_LUI | is_AUIPC            );
+wire j_type_inst = ~nop_insert & ~alu_flush & ~csr_hazard & ~dec_freeze & (is_JAL                       );
 
 reg [31:0] imm_p;
-reg [ 4:0] rd_p;
 reg [ 6:0] opcode_p;
 
 always @(*)
@@ -101,7 +107,7 @@ always @(posedge CLK or negedge RSTN)
         rd     <= 'd0;
         opcode <= 'd0;
       end  
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       begin
         imm    <= 'd0;
         funct7 <= 'd0;
@@ -146,13 +152,17 @@ always @(posedge CLK or negedge RSTN)
 //      rs1_ren      <= 'd0;
 //      rs2_ren      <= 'd0;
         rd_wen       <= 'd0;
+        dec_csr_addr <= 'd0;
+        dec_csr_imm  <= 'd0;
       end
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       begin
         dec_type_vld <= 'd0;
 //      rs1_ren      <= 'd0;
 //      rs2_ren      <= 'd0;
         rd_wen       <= 'd0;
+        dec_csr_addr <= 'd0;
+        dec_csr_imm  <= 'd0;
       end
     else if (~dec_freeze)
       begin
@@ -161,6 +171,8 @@ always @(posedge CLK or negedge RSTN)
 //      rs2_ren      <=  r_type_inst | s_type_inst | b_type_inst;
         rd_wen       <= (rd_p != 4'd0) & 
                         (r_type_inst | i_type_inst | u_type_inst | j_type_inst);
+        dec_csr_addr <=  imm_p[11:0];
+        dec_csr_imm  <=  rs1_p[ 4:0];
       end
   end
 

@@ -9,6 +9,7 @@ module BranchPredict #(
 )(  
      output wire        bp_taken
     ,output wire [31:0] bp_pc
+    , input             pc_freeze
     , input             pc_vld
     , input      [31:0] pc
     , input             alu_branch
@@ -198,8 +199,8 @@ reg [          31:0] btb_target [BTB_DEPTH-1:0];
 assign tag_match  = btb_tag   [pc[0+:BTB_WIDTH]] == pc[BTB_WIDTH+:TAG_WIDTH]; 
 assign tag_valid  = btb_valid [pc[0+:BTB_WIDTH]] & tag_match;
 
-assign pc_taken   =  bht_counter[bht_pc_idx][1] & pc_vld & tag_valid;
-assign pc_n_taken = ~bht_counter[bht_pc_idx][1] & pc_vld & tag_valid;
+assign pc_taken   =  bht_counter[bht_pc_idx][1] & pc_vld & ~pc_freeze & tag_valid;
+assign pc_n_taken = ~bht_counter[bht_pc_idx][1] & pc_vld & ~pc_freeze & tag_valid;
 
 assign bp_taken   = pc_taken;
 

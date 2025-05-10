@@ -73,11 +73,13 @@ _start:
     j end
 
 error:
-    li t0, 0x1234FFFF
-    li t1, 0xFFFF1FFF
-    sw t0, 0(t1)
+    li t0, 0x12340000
+    li t1, 0x0000FFFF
+    csrw mscratch, t0
+    csrs mscratch, t1
 
 end:
-    li t0, 0xFFFF1234
-    li t1, 0xFFFF1FFF
-    sw t0, 0(t1)
+    li t0, 0x00001234
+    li t1, 0xFFFF0000
+    csrw mscratch, t0
+    csrs mscratch, t1

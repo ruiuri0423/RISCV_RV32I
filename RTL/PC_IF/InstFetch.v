@@ -26,6 +26,7 @@ module InstFetch (
     , input wire [31:0] alu_pc    
     //
     , input wire        lsu_ready
+    , input wire        csr_hazard
     , input wire        nop_insert
     , input wire [31:0] boot_addr
     //
@@ -68,6 +69,7 @@ BranchPredict #(
 ) i1_BranchPredict (  
     .bp_taken   ( bp_taken   ),
     .bp_pc      ( bp_pc      ),
+    .pc_freeze  ( pc_freeze  ),
     .pc_vld     ( inst_vld   ),
     .pc         ( inst_pc    ),
     .alu_branch ( alu_branch ),
@@ -98,7 +100,7 @@ assign mem_addr  = alu_flush      ?
 assign mem_wdata = 'd0; /* Instruction Memory without write */
 assign mem_wen   = 'd0; /* Instruction Memory without write */
 
-assign pc_freeze = nop_insert | ~lsu_ready;
+assign pc_freeze = nop_insert | ~lsu_ready | csr_hazard;
 
 always @(posedge CLK or negedge RSTN)
     begin
@@ -144,8 +146,6 @@ always @(posedge CLK or negedge RSTN)
             inst_pc    <= 'd0;
         else if (mem_en)
             inst_pc    <= mem_addr;
-        else if (alu_flush)
-            inst_pc    <= 'd0;
     end
 
 endmodule

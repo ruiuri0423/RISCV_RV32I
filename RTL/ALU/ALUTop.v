@@ -34,12 +34,6 @@ module ALUTop(
     , input            dec_lsign
     // From InstFetch
     , input     [31:0] inst_pc // for jalr prediction
-    // From forward
-    , input     [ 0:0] nop_insert
-    , input     [ 0:0] rs1_forward
-    , input     [31:0] rs1_forward_data
-    , input     [ 0:0] rs2_forward
-    , input     [31:0] rs2_forward_data
     // ALU enable
     , input            is_ADD
     , input            is_SUB
@@ -62,17 +56,14 @@ module ALUTop(
     , input            RSTN
 );
 
-wire [31:0] din1_forward = rs1_forward ? rs1_forward_data : dec_rs1_data ; // forward
-wire [31:0] din2_forward = rs2_forward ? rs2_forward_data : dec_rs2_data ; // forward
-
 wire [31:0] alu_din1   =   dec_jal ?  dec_pc :
                           dec_jalr ?  dec_pc : 
-                         dec_auipc ?  dec_pc : din1_forward;  
+                         dec_auipc ?  dec_pc : dec_rs1_data;  
                                                 
 wire [31:0] alu_din2   =   dec_jal ?     'd4 :
                           dec_jalr ?     'd4 : 
                          dec_auipc ? dec_imm :
-                           rs2_sel ? dec_imm : din2_forward;
+                           rs2_sel ? dec_imm : dec_rs2_data;
 
 wire        alu_freeze  = ~lsu_ready;
 wire [31:0] alu_out_nxt = is_ADD ? ADD(alu_din1, alu_din2) :
@@ -95,7 +86,7 @@ always @(posedge CLK or negedge RSTN)
     begin
         if (~RSTN)
             alu_out <= 'd0;
-        else if (nop_insert | alu_flush)
+        else if (alu_flush)
             alu_out <= 'd0;
         else if (~alu_freeze)
             alu_out <= alu_out_nxt;
@@ -105,8 +96,8 @@ always @(posedge CLK or negedge RSTN)
     begin
         if (~RSTN)
             alu_out_vld <= 1'b0;
-        else if (nop_insert | alu_flush)
-            alu_out_vld <= 1'b1;
+        else if (alu_flush)
+            alu_out_vld <= 1'b0;
         else if (~alu_freeze)
             alu_out_vld <= dec_vld;
     end
@@ -121,7 +112,7 @@ always @(posedge CLK or negedge RSTN)
                 alu_LS       <= 'd0;
                 alu_lsign    <= 'd0;
             end
-        else if (nop_insert | alu_flush)
+        else if (alu_flush)
             begin
                 alu_rs2_data <= 'd0;
                 alu_rd_wen   <= 'd0;
@@ -131,7 +122,7 @@ always @(posedge CLK or negedge RSTN)
             end
         else if (~alu_freeze)
             begin
-                alu_rs2_data <= rs2_forward ? rs2_forward_data : dec_rs2_data;
+                alu_rs2_data <= dec_rs2_data;
                 alu_rd_wen   <= dec_rd_wen;
                 alu_rd       <= dec_rd;
                 alu_LS       <= dec_LS;
@@ -151,7 +142,7 @@ always @(posedge CLK or negedge RSTN)
                 alu_target <= 'd0;
                 alu_pc     <= 'd0;
             end
-        else if (nop_insert | alu_flush)
+        else if (alu_flush)
             begin
                 alu_branch <= 'd0;
                 alu_call   <= 'd0;
@@ -189,12 +180,12 @@ always @(posedge CLK or negedge RSTN)
                 alu_taken  <= ((dec_branch & alu_out_nxt[0]) | dec_jal | dec_jalr);
 
                 alu_flush  <= (((dec_branch & alu_out_nxt[0]) | dec_jal) ^ dec_taken) |
-                              (((dec_pc + din1_forward) != inst_pc) & dec_jalr) |
+                              (((dec_pc + dec_rs1_data) != inst_pc) & dec_jalr) |
                               (((dec_pc +      dec_imm) != inst_pc) & dec_jal ) ;
 
                 alu_target <=  dec_branch ? (dec_pc       + dec_imm) :
                                   dec_jal ? (dec_pc       + dec_imm) :
-                                 dec_jalr ? (din1_forward + dec_imm) : 'd0;
+                                 dec_jalr ? (dec_rs1_data + dec_imm) : 'd0;
 
                 alu_pc     <=  dec_branch ?  dec_pc :
                                   dec_jal ?  dec_pc :

@@ -4,8 +4,10 @@ module LSU(
     , input            alu_out_vld
     , input     [ 4:0] alu_rd
     , input            alu_rd_wen
-    , input     [ 3:0] alu_LS // bit 3: enable, bit 2: is store, bit 1~0: word/half/byte 
+    , input     [ 3:0] alu_LS      // bit 3: enable, bit 2: is store, bit 1~0: word/half/byte 
     , input            alu_lsign
+    , input            alu_csr_vld // CSR
+    , input     [31:0] alu_csr_out // CSR
     ,output reg [31:0] lsu_out
     ,output reg        lsu_out_vld
     ,output reg [ 4:0] lsu_rd
@@ -52,8 +54,8 @@ always @(posedge CLK or negedge RSTN)
 always @(posedge CLK)
     if (lsu_ready)
         begin
-            lsu_out     <= alu_out;
-            lsu_out_vld <= alu_out_vld;
+            lsu_out     <=  alu_csr_vld ? alu_csr_out : alu_out;
+            lsu_out_vld <= (alu_csr_vld | alu_out_vld) & ~load;
             lsu_rd_wen  <= alu_rd_wen;
             lsu_rd      <= alu_rd;
             lsu_rstrb   <= mem_rstrb;

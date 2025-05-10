@@ -8,6 +8,10 @@ module RegisterTop (
   , input     [ 4:0] rs2
   , input            rs1_ren
   , input            rs2_ren
+  , input     [ 0:0] rs1_forward
+  , input     [31:0] rs1_forward_data
+  , input     [ 0:0] rs2_forward
+  , input     [31:0] rs2_forward_data
   , input            CLK
   , input            RSTN
 );
@@ -111,16 +115,12 @@ wire [31:0] rs1_p = (rs1 == 'd31) ? x31 :
                     (rs1 == 'd01) ? x01 :
                                     x00 ;
 
-/* Feed through (BEGIN) */
-wire rs1_feed_through = rs1 == rd;
-/* Feed through (END)   */
-
 always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
         rs1_data <= 'd0;
     else if (rs1_ren)
-        rs1_data <= rs1_feed_through ? x_wdata : rs1_p;
+        rs1_data <= rs1_forward ? rs1_forward_data : rs1_p;
   end
 
 wire [31:0] rs2_p = (rs2 == 'd31) ? x31 :
@@ -156,16 +156,12 @@ wire [31:0] rs2_p = (rs2 == 'd31) ? x31 :
                     (rs2 == 'd01) ? x01 :
                                     x00 ;
 
-/* Feed through (BEGIN) */
-wire rs2_feed_through = rs2 == rd;
-/* Feed through (END)   */
-
 always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
         rs2_data <= 'd0;
     else if (rs2_ren)
-        rs2_data <= rs2_feed_through ? x_wdata : rs2_p;
+        rs2_data <= rs2_forward ? rs2_forward_data : rs2_p;
   end
 
 Register32 i0_Register32(

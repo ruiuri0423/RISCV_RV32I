@@ -54,8 +54,8 @@ module CoreBus #(
       core_bus_inst_mem_addr  = 'd0;
       core_bus_inst_mem_wdata = 'd0;
       core_bus_inst_mem_wen   = 'd0;
-//    inst_mem_rdata = 'd0;
-//    inst_mem_rvld  = 'd0;
+      inst_mem_rdata = 'd0;
+      inst_mem_rvld  = 'd0;
 
       if (inst_mem_addr >= INST_BASE_ADDR
             && inst_mem_addr <= INST_END_ADDR)
@@ -66,25 +66,25 @@ module CoreBus #(
         core_bus_inst_mem_wen   = inst_mem_wen   ;
       end
     
-//    inst_mem_rdata = core_bus_inst_mem_rdata;
-//    inst_mem_rvld  = core_bus_inst_mem_rvld;
+      inst_mem_rdata = core_bus_inst_mem_rdata;
+      inst_mem_rvld  = core_bus_inst_mem_rvld;
     end
   
-  always @(posedge CLK or negedge RSTN)
-    begin
-      if (~RSTN)
-        inst_mem_rdata <= 'd0;
-      else if (core_bus_inst_mem_rvld)
-        inst_mem_rdata <= core_bus_inst_mem_rdata;
-    end
-   
-  always @(posedge CLK or negedge RSTN)
-    begin
-      if (~RSTN)
-        inst_mem_rvld <= 'd0;
-      else
-        inst_mem_rvld <= core_bus_inst_mem_rvld;
-    end 
+//always @(posedge CLK or negedge RSTN)
+//  begin
+//    if (~RSTN)
+//      inst_mem_rdata <= 'd0;
+//    else if (core_bus_inst_mem_rvld)
+//      inst_mem_rdata <= core_bus_inst_mem_rdata;
+//  end
+// 
+//always @(posedge CLK or negedge RSTN)
+//  begin
+//    if (~RSTN)
+//      inst_mem_rvld <= 'd0;
+//    else
+//      inst_mem_rvld <= core_bus_inst_mem_rvld;
+//  end 
 
   // Instruction address decoder
   always @(*)
@@ -104,6 +104,11 @@ module CoreBus #(
         core_bus_lsu_mem_addr  = lsu_mem_addr  ;
         core_bus_lsu_mem_wdata = lsu_mem_wdata ;
         core_bus_lsu_mem_wen   = lsu_mem_wen   ;
+      end
+
+      else if(lsu_mem_addr == 32'hFFFF2000)
+      begin
+        $write("%c", lsu_mem_wdata[7:0]);
       end
     
 //    lsu_mem_rdata = core_bus_lsu_mem_rdata;

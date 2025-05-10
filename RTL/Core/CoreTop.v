@@ -36,6 +36,11 @@ wire [31:0] dec_rs2_data;
 wire [31:0] dec_imm_data;
 wire [ 3:0] dec_LS;
 wire [31:0] dec_pc;
+wire [11:0] dec_csr_addr; // CSR
+wire [31:0] dec_csr_imm;  // CSR
+wire        dec_csr_ren;  // CSR
+wire        dec_csr_wen;  // CSR
+wire        csr_hazard;   // CSR
 
 // Stage : Execute
 wire [31:0] alu_rs2_data;
@@ -49,6 +54,8 @@ wire        alu_taken;
 wire        alu_flush;
 wire [31:0] alu_target;
 wire [31:0] alu_pc;
+wire        alu_csr_vld;
+wire [31:0] alu_csr_out;
 
 // Stage : Memory Access
 wire        lsu_ready;
@@ -113,6 +120,7 @@ InstFetch i0_InstFetch(
     .alu_flush  ( alu_flush      ),
     .alu_target ( alu_target     ),
     .alu_pc     ( alu_pc         ),
+    .csr_hazard ( csr_hazard     ),
     .nop_insert ( nop_insert     ),
     .boot_addr  ( boot_addr      ),
     .CLK        ( CLK            ),
@@ -140,6 +148,10 @@ DecoderTop i2_DecoderTop(
   .dec_branch    ( dec_branch   ),
   .dec_taken     ( dec_taken    ),
   .dec_lsign     ( dec_lsign    ),
+  .dec_csr_addr  ( dec_csr_addr ),// CSR
+  .dec_csr_imm   ( dec_csr_imm  ),// CSR
+  .dec_csr_ren   ( dec_csr_ren  ),// CSR
+  .dec_csr_wen   ( dec_csr_wen  ),// CSR
   .dec_pc        ( dec_pc       ),
   .rs1_ren       ( dec_rs1_ren  ),
   .rs2_ren       ( dec_rs2_ren  ),
@@ -168,8 +180,14 @@ DecoderTop i2_DecoderTop(
   .is_LTU        ( is_LTU       ),
   .is_GT         ( is_GT        ),
   .is_GTU        ( is_GTU       ),
+  .is_CSR        ( is_CSR       ),// CSR
+  .is_CSRI       ( is_CSRI      ),// CSR
+  .is_CSR_ADD    ( is_CSR_ADD   ),// CSR
+  .is_CSR_SET    ( is_CSR_SET   ),// CSR
+  .is_CSR_CLR    ( is_CSR_CLR   ),// CSR
   .rs2_sel       ( rs2_sel      ),
   .is_LS         ( dec_LS       ),
+  .csr_hazard    ( csr_hazard   ),
   .nop_insert    ( nop_insert   ),
   .alu_flush     ( alu_flush    ),
   .inst          ( inst         ),
@@ -181,17 +199,21 @@ DecoderTop i2_DecoderTop(
 );
 
 RegisterTop i3_RegisterTop(
-  .rs1_data ( dec_rs1_data ),
-  .rs2_data ( dec_rs2_data ),
-  .rd_data  ( wb_rd_data   ),
-  .rd       ( wb_rd        ),
-  .rd_wen   ( wb_rd_wen    ), 
-  .rs1      ( dec_rs1_p    ),
-  .rs2      ( dec_rs2_p    ),
-  .rs1_ren  ( dec_rs1_ren  ),
-  .rs2_ren  ( dec_rs2_ren  ),
-  .CLK      ( CLK          ),
-  .RSTN     ( RSTN         )
+  .rs1_data         ( dec_rs1_data     ),
+  .rs2_data         ( dec_rs2_data     ),
+  .rd_data          ( wb_rd_data       ),
+  .rd               ( wb_rd            ),
+  .rd_wen           ( wb_rd_wen        ), 
+  .rs1              ( dec_rs1_p        ),
+  .rs2              ( dec_rs2_p        ),
+  .rs1_ren          ( dec_rs1_ren      ),
+  .rs2_ren          ( dec_rs2_ren      ),
+  .rs1_forward      ( rs1_forward      ),
+  .rs1_forward_data ( rs1_forward_data ),
+  .rs2_forward      ( rs2_forward      ),
+  .rs2_forward_data ( rs2_forward_data ),
+  .CLK              ( CLK              ),
+  .RSTN             ( RSTN             )
 );
 
 ALUTop i4_ALUTop(
@@ -227,11 +249,6 @@ ALUTop i4_ALUTop(
     .dec_taken        ( dec_taken        ),
     .dec_lsign        ( dec_lsign        ),
     .inst_pc          ( inst_pc          ),
-    .nop_insert       ( nop_insert       ),
-    .rs2_forward      ( rs2_forward      ),
-    .rs2_forward_data ( rs2_forward_data ),
-    .rs1_forward      ( rs1_forward      ),
-    .rs1_forward_data ( rs1_forward_data ),
     .is_ADD           ( is_ADD           ),
     .is_SUB           ( is_SUB           ),
     .is_AND           ( is_AND           ),
@@ -260,6 +277,8 @@ LSU i5_LSU(
     .alu_rd_wen  ( alu_rd_wen    ),
     .alu_LS      ( alu_LS        ),// bit 3: enable, bit 2: is store, bit 1~0: word/half/byte 
     .alu_lsign   ( alu_lsign     ),
+    .alu_csr_vld ( alu_csr_vld   ),
+    .alu_csr_out ( alu_csr_out   ),
     .lsu_out     ( lsu_out       ),
     .lsu_out_vld ( lsu_out_vld   ),
     .lsu_rd_wen  ( lsu_rd_wen    ),
@@ -295,7 +314,6 @@ MemoryModel i6_DataMemory(
 WriteBack i7_WriteBack(
     .lsu_out       ( lsu_out       ),
     .lsu_out_vld   ( lsu_out_vld   ),
-    .lsu_ready     ( lsu_ready     ),
     .lsu_mem_rdata ( lsu_mem_rdata ),
     .lsu_mem_rvld  ( lsu_mem_rvld  ),
     .lsu_rstrb     ( lsu_rstrb     ),
@@ -345,14 +363,21 @@ CoreBus#(
 );
 
 ForwardUnit i9_ForwardUnit(
+  .dec_rs2_p        ( dec_rs2_p             ),
+  .dec_rs1_p        ( dec_rs1_p             ),
+  .dec_rd_wen       ( dec_rd_wen            ),
+  .dec_rd           ( dec_rd                ),
   .dec_rs2          ( dec_rs2               ),
   .dec_rs1          ( dec_rs1               ),
-  .lsu_mem_en       ( core_bus_lsu_mem_en   ),
-  .lsu_mem_wen      ( core_bus_lsu_mem_wen  ),
-  .lsu_mem_rvld     ( core_bus_lsu_mem_rvld ),
+  .dec_LS           ( dec_LS                ),
+  .lsu_mem_rvld     ( lsu_mem_rvld          ),
+  .alu_flush        ( alu_flush             ),
+  .alu_LS           ( alu_LS                ),
   .alu_rd           ( alu_rd                ),
   .alu_rd_wen       ( alu_rd_wen            ),
   .alu_out          ( alu_out               ),
+  .alu_csr_vld      ( alu_csr_vld           ),// CSR
+  .alu_csr_out      ( alu_csr_out           ),// CSR
   .wb_rd            ( wb_rd                 ),
   .wb_rd_wen        ( wb_rd_wen             ),
   .wb_rd_data       ( wb_rd_data            ),
@@ -363,6 +388,25 @@ ForwardUnit i9_ForwardUnit(
   .rs2_forward_data ( rs2_forward_data      ),
   .CLK              ( CLK                   ),
   .RSTN             ( RSTN                  )
+);
+
+CSRTop i10_CSRTop(
+  .alu_csr_vld      ( alu_csr_vld      ),
+  .alu_csr_out      ( alu_csr_out      ),
+  .dec_rs1_data     ( dec_rs1_data     ),
+  .dec_csr_imm      ( dec_csr_imm      ),
+  .dec_csr_addr     ( dec_csr_addr     ),
+  .dec_csr_ren      ( dec_csr_ren      ),
+  .dec_csr_wen      ( dec_csr_wen      ),
+  .is_CSR           ( is_CSR           ),
+  .is_CSRI          ( is_CSRI          ),
+  .is_CSR_ADD       ( is_CSR_ADD       ),
+  .is_CSR_SET       ( is_CSR_SET       ),
+  .is_CSR_CLR       ( is_CSR_CLR       ),
+  .lsu_ready        ( lsu_ready        ),
+  .alu_flush        ( alu_flush        ),
+  .CLK              ( CLK              ),
+  .RSTN             ( RSTN             ) 
 );
 
 endmodule

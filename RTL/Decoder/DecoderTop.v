@@ -10,6 +10,10 @@ module DecoderTop(
   ,output wire        dec_taken
   ,output wire        dec_lsign
   ,output wire [31:0] dec_pc
+  ,output wire [11:0] dec_csr_addr // CSR
+  ,output wire [31:0] dec_csr_imm  // CSR
+  ,output wire        dec_csr_ren  // CSR
+  ,output wire        dec_csr_wen  // CSR
   ,output wire        rs1_ren
   ,output wire        rs2_ren
   ,output wire        rd_wen
@@ -39,10 +43,17 @@ module DecoderTop(
   ,output wire        is_LTU
   ,output wire        is_GT 
   ,output wire        is_GTU
+  ,output wire        is_CSR       // CSR
+  ,output wire        is_CSRI      // CSR
+  ,output wire        is_CSR_ADD   // CSR
+  ,output wire        is_CSR_SET   // CSR
+  ,output wire        is_CSR_CLR   // CSR
   ,output wire        rs2_sel
 // LSU enable
   ,output wire [ 3:0] is_LS
   , input wire        lsu_ready
+// CSR Hazard (Atomic)
+  ,output wire        csr_hazard
 // from alu
   , input             alu_flush // branch miss predict
 // from forward unit
@@ -69,10 +80,13 @@ wire        is_MISC_MEM;
 wire        is_SYSTEM;
 wire [ 2:0] funct3_p;
 wire [ 6:0] funct7_p;
-wire        dec_freeze = nop_insert | ~lsu_ready;
+wire [ 4:0] rd_p;
+wire        dec_freeze = ~lsu_ready;
 
 TypeDecoder i0_TypeDecoder(
   .dec_type_vld ( dec_type_vld ),
+  .dec_csr_addr ( dec_csr_addr ),// CSR
+  .dec_csr_imm  ( dec_csr_imm  ),// CSR
   .rs1_ren      ( rs1_ren      ),
   .rs2_ren      ( rs2_ren      ),
   .rd_wen       ( rd_wen       ),
@@ -84,6 +98,7 @@ TypeDecoder i0_TypeDecoder(
   .rs1          ( rs1          ),
   .rs2_p        ( rs2_p        ),
   .rs1_p        ( rs1_p        ),
+  .rd_p         ( rd_p         ),
   .funct3       ( funct3       ),
   .funct3_p     ( funct3_p     ),
   .rd           ( rd           ),
@@ -101,6 +116,8 @@ TypeDecoder i0_TypeDecoder(
   .is_SYSTEM    ( is_SYSTEM    ),
   .dec_freeze   ( dec_freeze   ),
   .alu_flush    ( alu_flush    ),
+  .nop_insert   ( nop_insert   ),
+  .csr_hazard   ( csr_hazard   ),
   .inst         ( inst         ),
   .inst_vld     ( inst_vld     ),
   .CLK          ( CLK          ),
@@ -116,6 +133,8 @@ FunctionDecoeder i1_FunctionDecorder(
   .dec_branch    ( dec_branch    ),
   .dec_taken     ( dec_taken     ),
   .dec_lsign     ( dec_lsign     ),
+  .dec_csr_ren   ( dec_csr_ren   ),// CSR
+  .dec_csr_wen   ( dec_csr_wen   ),// CSR
 // ALU enable
   .is_ADD        ( is_ADD        ),
   .is_SUB        ( is_SUB        ),
@@ -132,10 +151,19 @@ FunctionDecoeder i1_FunctionDecorder(
   .is_LTU        ( is_LTU        ),
   .is_GT         ( is_GT         ),
   .is_GTU        ( is_GTU        ),
+  .is_CSR        ( is_CSR        ),// CSR
+  .is_CSRI       ( is_CSRI       ),// CSR
+  .is_CSR_ADD    ( is_CSR_ADD    ),// CSR
+  .is_CSR_SET    ( is_CSR_SET    ),// CSR
+  .is_CSR_CLR    ( is_CSR_CLR    ),// CSR
   .rs2_sel       ( rs2_sel       ),
 // LSU enable
   .is_LS         ( is_LS         ),
+// CSR Hazard (Atomic)
+  .csr_hazard    ( csr_hazard    ),
 // from TYPE_DECODER
+  .rd_p          ( rd_p          ),
+  .rs1_p         ( rs1_p         ),  
   .funct3_p      ( funct3_p      ),
   .funct7_p      ( funct7_p      ),
   .is_OP         ( is_OP         ),
@@ -151,6 +179,7 @@ FunctionDecoeder i1_FunctionDecorder(
   .is_SYSTEM     ( is_SYSTEM     ),
   .dec_freeze    ( dec_freeze    ),
   .alu_flush     ( alu_flush     ),
+  .nop_insert    ( nop_insert    ),
   .inst_pc       ( inst_pc       ),
   .inst_taken    ( inst_taken    ),
   .inst_vld      ( inst_vld      ),

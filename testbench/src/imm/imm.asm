@@ -69,15 +69,15 @@ ffff00f0:	00000013          	nop
 ffff00f4:	0180006f          	j	ffff010c <end>
 
 ffff00f8 <error>:
-ffff00f8:	123502b7          	lui	t0,0x12350
-ffff00fc:	fff28293          	addi	t0,t0,-1 # 1234ffff <__stack_size+0x1234efff>
-ffff0100:	ffff2337          	lui	t1,0xffff2
-ffff0104:	fff30313          	addi	t1,t1,-1 # ffff1fff <end+0x1ef3>
-ffff0108:	00532023          	sw	t0,0(t1)
+ffff00f8:	123402b7          	lui	t0,0x12340
+ffff00fc:	00010337          	lui	t1,0x10
+ffff0100:	fff30313          	addi	t1,t1,-1 # ffff <__stack_size+0xefff>
+ffff0104:	34029073          	csrw	mscratch,t0
+ffff0108:	34032073          	csrs	mscratch,t1
 
 ffff010c <end>:
-ffff010c:	ffff12b7          	lui	t0,0xffff1
-ffff0110:	23428293          	addi	t0,t0,564 # ffff1234 <end+0x1128>
-ffff0114:	ffff2337          	lui	t1,0xffff2
-ffff0118:	fff30313          	addi	t1,t1,-1 # ffff1fff <end+0x1ef3>
-ffff011c:	00532023          	sw	t0,0(t1)
+ffff010c:	000012b7          	lui	t0,0x1
+ffff0110:	23428293          	addi	t0,t0,564 # 1234 <__stack_size+0x234>
+ffff0114:	ffff0337          	lui	t1,0xffff0
+ffff0118:	34029073          	csrw	mscratch,t0
+ffff011c:	34032073          	csrs	mscratch,t1

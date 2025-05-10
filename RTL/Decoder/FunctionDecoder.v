@@ -7,6 +7,8 @@ module FunctionDecoeder (
   ,output reg        dec_branch    
   ,output reg        dec_taken
   ,output reg        dec_lsign
+  ,output reg        dec_csr_ren  // CSR
+  ,output reg        dec_csr_wen  // CSR
 // ALU enable
   ,output reg        is_ADD
   ,output reg        is_SUB
@@ -23,10 +25,19 @@ module FunctionDecoeder (
   ,output reg        is_LTU
   ,output reg        is_GT 
   ,output reg        is_GTU
+  ,output reg        is_CSR       // CSR
+  ,output reg        is_CSRI      // CSR
+  ,output reg        is_CSR_ADD   // CSR
+  ,output reg        is_CSR_SET   // CSR
+  ,output reg        is_CSR_CLR   // CSR
   ,output reg        rs2_sel
 // LSU enable
   ,output reg [ 3:0] is_LS // bit 3: enable, bit 2: is store, bit 1~0: word/half/byte 
+// CSR Hazard (Atomic)
+  ,output            csr_hazard
 // from TYPE_DECODER
+  , input     [ 4:0] rd_p
+  , input     [ 4:0] rs1_p
   , input     [ 2:0] funct3_p
   , input     [ 6:0] funct7_p
   , input            is_OP    
@@ -42,6 +53,7 @@ module FunctionDecoeder (
   , input            is_SYSTEM
   , input            dec_freeze
   , input            alu_flush
+  , input            nop_insert
   , input     [31:0] inst_pc
   , input            inst_taken
   , input            inst_vld
@@ -138,66 +150,100 @@ assign lui_en   = inst_vld & is_LUI;
 assign auipc_en = inst_vld & is_AUIPC;
 assign jal_en   = inst_vld & is_JAL;
 
+//=============== CSR Atomic ===============//
+assign csrrw_en  = inst_vld & is_SYSTEM & (funct3_p == `FUNCT_CSRRW );
+assign csrrs_en  = inst_vld & is_SYSTEM & (funct3_p == `FUNCT_CSRRS );
+assign csrrc_en  = inst_vld & is_SYSTEM & (funct3_p == `FUNCT_CSRRC );
+assign csrrwi_en = inst_vld & is_SYSTEM & (funct3_p == `FUNCT_CSRRWI);
+assign csrrsi_en = inst_vld & is_SYSTEM & (funct3_p == `FUNCT_CSRRSI);
+assign csrrci_en = inst_vld & is_SYSTEM & (funct3_p == `FUNCT_CSRRCI);
+
+assign is_CSR_p     =  csrrw_en |  csrrs_en |  csrrc_en;// CSR
+assign is_CSRI_p    = csrrwi_en | csrrsi_en | csrrci_en;// CSR
+assign is_CSR_ADD_p =  csrrw_en | csrrwi_en;            // CSR
+assign is_CSR_SET_p =  csrrs_en | csrrsi_en;            // CSR
+assign is_CSR_CLR_p =  csrrc_en | csrrci_en;            // CSR
+
+assign csr_hazard = (is_CSR   | is_CSRI  ) & 
+                    (is_CSR_p | is_CSRI_p);
+
 //=============== ALU Function enable ===============//
 always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
       begin
-        is_ADD <= 1'b0;
-        is_SUB <= 1'b0;
-        is_AND <= 1'b0;
-        is_OR  <= 1'b0;
-        is_XOR <= 1'b0;
-        is_SLL <= 1'b0;
-        is_SRL <= 1'b0;
-        is_SRA <= 1'b0;
-        is_ASG <= 1'b0;
-        is_EQ  <= 1'b0;
-        is_NE  <= 1'b0;
-        is_LT  <= 1'b0;
-        is_LTU <= 1'b0;
-        is_GT  <= 1'b0;
-        is_GTU <= 1'b0;
+        is_ADD     <= 1'b0;
+        is_SUB     <= 1'b0;
+        is_AND     <= 1'b0;
+        is_OR      <= 1'b0;
+        is_XOR     <= 1'b0;
+        is_SLL     <= 1'b0;
+        is_SRL     <= 1'b0;
+        is_SRA     <= 1'b0;
+        is_ASG     <= 1'b0;
+        is_EQ      <= 1'b0;
+        is_NE      <= 1'b0;
+        is_LT      <= 1'b0;
+        is_LTU     <= 1'b0;
+        is_GT      <= 1'b0;
+        is_GTU     <= 1'b0;
+        is_CSR     <= 1'b0;// CSR
+        is_CSRI    <= 1'b0;// CSR
+        is_CSR_ADD <= 1'b0;// CSR
+        is_CSR_SET <= 1'b0;// CSR
+        is_CSR_CLR <= 1'b0;// CSR
       end
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       begin
-        is_ADD <= 1'b0;
-        is_SUB <= 1'b0;
-        is_AND <= 1'b0;
-        is_OR  <= 1'b0;
-        is_XOR <= 1'b0;
-        is_SLL <= 1'b0;
-        is_SRL <= 1'b0;
-        is_SRA <= 1'b0;
-        is_ASG <= 1'b0;
-        is_EQ  <= 1'b0;
-        is_NE  <= 1'b0;
-        is_LT  <= 1'b0;
-        is_LTU <= 1'b0;
-        is_GT  <= 1'b0;
-        is_GTU <= 1'b0;
+        is_ADD     <= 1'b0;
+        is_SUB     <= 1'b0;
+        is_AND     <= 1'b0;
+        is_OR      <= 1'b0;
+        is_XOR     <= 1'b0;
+        is_SLL     <= 1'b0;
+        is_SRL     <= 1'b0;
+        is_SRA     <= 1'b0;
+        is_ASG     <= 1'b0;
+        is_EQ      <= 1'b0;
+        is_NE      <= 1'b0;
+        is_LT      <= 1'b0;
+        is_LTU     <= 1'b0;
+        is_GT      <= 1'b0;
+        is_GTU     <= 1'b0;
+        is_CSR     <= 1'b0;// CSR
+        is_CSRI    <= 1'b0;// CSR
+        is_CSR_ADD <= 1'b0;// CSR
+        is_CSR_SET <= 1'b0;// CSR
+        is_CSR_CLR <= 1'b0;// CSR
       end
     else if (~dec_freeze)
       begin
-        is_ADD <=  addi_en |  add_en |
-                   jalr_en |  jal_en |
-                     sb_en |   sh_en |    sw_en |
-                     lb_en |   lh_en |    lw_en | 
-                    lbu_en |  lhu_en | auipc_en ;
-        is_SUB <=   sub_en;    
-        is_AND <=  andi_en |  and_en;
-        is_OR  <=   ori_en |   or_en;
-        is_XOR <=  xori_en |  xor_en;
-        is_SLL <=  slli_en |  sll_en;
-        is_SRL <=  srli_en |  srl_en;
-        is_SRA <=  srai_en |  sra_en;
-        is_ASG <=   lui_en;     
-        is_EQ  <=   beq_en;
-        is_NE  <=   bne_en;
-        is_LT  <=  slti_en |  slt_en |  blt_en;
-        is_LTU <= sltiu_en | sltu_en | bltu_en;
-        is_GT  <=   bge_en;
-        is_GTU <=  bgeu_en;
+        is_ADD     <= addi_en |  add_en |
+                      jalr_en |  jal_en |
+                        sb_en |   sh_en |    sw_en |
+                        lb_en |   lh_en |    lw_en | 
+                       lbu_en |  lhu_en | auipc_en ;
+        is_SUB     <=   sub_en;    
+        is_AND     <=  andi_en |  and_en;
+        is_OR      <=   ori_en |   or_en;
+        is_XOR     <=  xori_en |  xor_en;
+        is_SLL     <=  slli_en |  sll_en;
+        is_SRL     <=  srli_en |  srl_en;
+        is_SRA     <=  srai_en |  sra_en;
+        is_ASG     <=   lui_en;     
+        is_EQ      <=   beq_en;
+        is_NE      <=   bne_en;
+        is_LT      <=  slti_en |  slt_en |  blt_en;
+        is_LTU     <= sltiu_en | sltu_en | bltu_en;
+        is_GT      <=   bge_en;
+        is_GTU     <=  bgeu_en;
+        // CSR (begin)
+        is_CSR     <= is_CSR_p;    
+        is_CSRI    <= is_CSRI_p;   
+        is_CSR_ADD <= is_CSR_ADD_p;
+        is_CSR_SET <= is_CSR_SET_p;
+        is_CSR_CLR <= is_CSR_CLR_p;
+        // CSR (end)
       end
   end
 
@@ -205,7 +251,7 @@ always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
       rs2_sel <= 1'b0;
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       rs2_sel <= 1'b0;
     else if (~dec_freeze)
       begin
@@ -226,7 +272,7 @@ always @(posedge CLK or negedge RSTN)
         dec_branch <= 'd0;
         dec_lsign  <= 'd0;
       end
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       begin
         dec_auipc  <= 'd0;
         dec_jal    <= 'd0;
@@ -247,11 +293,30 @@ always @(posedge CLK or negedge RSTN)
       end
   end
 
+always @(posedge CLK or negedge RSTN)
+  begin
+    if (~RSTN)
+      begin
+        dec_csr_ren  <= 'd0;// CSR
+        dec_csr_wen  <= 'd0;// CSR
+      end
+    else if (alu_flush | csr_hazard | nop_insert)
+      begin
+        dec_csr_ren  <= 'd0;// CSR
+        dec_csr_wen  <= 'd0;// CSR
+      end
+    else if (~dec_freeze)
+      begin
+        dec_csr_ren  <= (is_CSR_p | is_CSRI_p) & ~( is_CSR_ADD_p                 & ( rd_p == 4'd0));
+        dec_csr_wen  <= (is_CSR_p | is_CSRI_p) & ~((is_CSR_SET_p | is_CSR_CLR_p) & (rs1_p == 4'd0));
+      end
+  end
+
 always @(posedge CLK or negedge RSTN) 
   begin
     if (~RSTN)
       dec_funct_vld <= 'd0;
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       dec_funct_vld <= 'd0;
     else if (~dec_freeze)
       dec_funct_vld <= inst_vld;
@@ -261,7 +326,7 @@ always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
       dec_pc <= 'd0;
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       dec_pc <= 'd0;
     else if (~dec_freeze)
       dec_pc <= inst_pc;
@@ -271,7 +336,7 @@ always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
       dec_taken <= 'd0;
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       dec_taken <= 'd0;
     else if (~dec_freeze)
       dec_taken <= inst_taken;
@@ -281,7 +346,7 @@ always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
       is_LS <= 4'b0;
-    else if (alu_flush)
+    else if (alu_flush | csr_hazard | nop_insert)
       is_LS <= 4'b0;
     else if (~dec_freeze)
       begin
