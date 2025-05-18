@@ -76,11 +76,11 @@ always @(*)
         opcode_p = inst[ 6: 0];
 
         case(1'b1)
-          i_type_inst: begin `I_TYPE_IMM end
-          s_type_inst: begin `S_TYPE_IMM end
-          b_type_inst: begin `B_TYPE_IMM end
-          u_type_inst: begin `U_TYPE_IMM end
-          j_type_inst: begin `J_TYPE_IMM end
+          i_type_inst: begin imm_p = `I_TYPE_IMM(inst); end
+          s_type_inst: begin imm_p = `S_TYPE_IMM(inst); end
+          b_type_inst: begin imm_p = `B_TYPE_IMM(inst); end
+          u_type_inst: begin imm_p = `U_TYPE_IMM(inst); end
+          j_type_inst: begin imm_p = `J_TYPE_IMM(inst); end
         endcase
       end
     else

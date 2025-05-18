@@ -55,8 +55,8 @@
 `define FUNCT_CSRRSI 3'b110
 `define FUNCT_CSRRCI 3'b111
 
-`define I_TYPE_IMM   assign imm_p = {{21{inst[31]}}, inst[30:20]}; 
-`define S_TYPE_IMM   assign imm_p = {{21{inst[31]}}, inst[30:25], inst[11:8], inst[7]};
-`define B_TYPE_IMM   assign imm_p = {{20{inst[31]}}, inst[7], inst[30:25], inst[11:8], 1'b0};
-`define U_TYPE_IMM   assign imm_p = {inst[31], inst[30:20], inst[19:12], 12'd0};
-`define J_TYPE_IMM   assign imm_p = {{12{inst[31]}}, inst[19:12], inst[20], inst[30:21], 1'b0};
+`define I_TYPE_IMM(x) {{21{x[31]}}, x[30:20]}
+`define S_TYPE_IMM(x) {{21{x[31]}}, x[30:25], x[11:8], x[7]}
+`define B_TYPE_IMM(x) {{20{x[31]}}, x[7], x[30:25], x[11:8], 1'b0} 
+`define U_TYPE_IMM(x) {x[31], x[30:20], x[19:12], 12'd0} 
+`define J_TYPE_IMM(x) {{12{x[31]}}, x[19:12], x[20], x[30:21], 1'b0}

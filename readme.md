@@ -1,5 +1,5 @@
 # RISC-V
-![5-Stage RISC-V Architecture](./DOC/image-2.png)
+![5-Stage RISC-V Architecture](./DOC/image.png)
 ---
 ### File Arch.
   ```
@@ -20,7 +20,8 @@
   ``` 
 ### Todo List
 - [x] Architecture Diagram
-- [ ] LSU re-design. 
+- [x] LSU re-design. 
+- [ ] RAS verification.
 - [ ] Control and Status Register (CSR)
 - [ ] Memory Access Mechanism Optimized
 - [ ] BUS Interface
