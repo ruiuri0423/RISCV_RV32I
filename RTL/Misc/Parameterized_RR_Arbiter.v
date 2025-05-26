@@ -1,8 +1,9 @@
-module parameterized_rr_arbiter #(
+module Parameterized_RR_Arbiter #(
    parameter USER      = 4
   ,parameter USER_LOG2 = $clog2(USER)
 )(
    output [USER          -1:0] grant
+  ,output [USER_LOG2     -1:0] grant_user
   , input [USER          -1:0] request
   , input [USER*USER_LOG2-1:0] priority_
   , input                      CLK
@@ -15,6 +16,8 @@ module parameterized_rr_arbiter #(
   reg  [USER*USER_LOG2-1:0] prior_set;
   wire [     USER_LOG2-1:0] current_user;
   wire [     USER_LOG2-1:0] shift_user;
+
+  assign grant_user = current_user;
   
   generate
     begin : COMBO
@@ -49,7 +52,7 @@ module parameterized_rr_arbiter #(
       if(~RSTN)
         prior_set <= priority_;
       else if (~|request)
-	prior_set <= priority_;
+	      prior_set <= priority_;
       else
         prior_set <= {prior_set, prior_set} >> (USER_LOG2 * shift_user);
     end

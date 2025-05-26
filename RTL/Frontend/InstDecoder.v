@@ -1,5 +1,3 @@
-`include "../Decoder/DefineType.v"
-
 module InstDecoder #(
    parameter DATA_WIDTH     = 32
   ,parameter ADDR_WIDTH     = 32
@@ -154,17 +152,17 @@ wire [    ADDR_WIDTH-1:0] dec_cur_pc;
 assign inst_q_ren    = issue_q_wok;
 assign issue_q_wen   = inst_q_rok & inst_q_ren;
 assign issue_q_wdata = {
-                          dec_function
-                         ,dec_operator
-                         ,dec_oprand
-                         ,dec_imm
-                         ,dec_rs1
-                         ,dec_rs2
-                         ,dec_rd
-                         ,dec_rd_wen
-                         ,dec_taken
+                          dec_cur_pc
                          ,dec_nxt_pc
-                         ,dec_cur_pc
+                         ,dec_taken
+                         ,dec_rd_wen
+                         ,dec_rd
+                         ,dec_rs2
+                         ,dec_rs1
+                         ,dec_imm
+                         ,dec_oprand
+                         ,dec_operator
+                         ,dec_function
                        };
 
 always @(*)

@@ -25,51 +25,52 @@ module FrontEnd #(
   ,parameter ISSUE_Q_DEPTH  = 2
 )(
   // AR Channel (AXI4-Lite)
-    input                  m_axi_arready
-  ,output                  m_axi_arvalid  
-  ,output [ADDR_WIDTH-1:0] m_axi_araddr
-  ,output [PROT_WIDTH-1:0] m_axi_arprot
+    input                     m_axi_arready
+  ,output                     m_axi_arvalid  
+  ,output [   ADDR_WIDTH-1:0] m_axi_araddr
+  ,output [   PROT_WIDTH-1:0] m_axi_arprot
   //  R Channel (AXI4-Lite)
-  ,output                  m_axi_rready
-  , input                  m_axi_rvalid
-  , input [DATA_WIDTH-1:0] m_axi_rdata
-  , input [RESP_WIDTH-1:0] m_axi_rresp
+  ,output                     m_axi_rready
+  , input                     m_axi_rvalid
+  , input [   DATA_WIDTH-1:0] m_axi_rdata
+  , input [   RESP_WIDTH-1:0] m_axi_rresp
+  // Issue Queue
+  ,output                     issue_q_ren
+  , input [ISSUE_Q_WIDTH-1:0] issue_q_rdata
+  , input                     issue_q_rok
   // BPU
-  , input                  bpu_valid  
-  , input                  bpu_flush
-  , input [ADDR_WIDTH-1:0] bpu_target
-  , input                  bpu_taken
-  , input                  bpu_call
-  , input                  bpu_ret
-  , input [ADDR_WIDTH-1:0] bpu_pc
+  , input                     bpu_valid  
+  , input                     bpu_flush
+  , input [   ADDR_WIDTH-1:0] bpu_target
+  , input                     bpu_taken
+  , input                     bpu_call
+  , input                     bpu_ret
+  , input [   ADDR_WIDTH-1:0] bpu_pc
   //
-  , input [ADDR_WIDTH-1:0] BOOT_ADDR
-  , input                  CLK
-  , input                  RSTN
+  , input [   ADDR_WIDTH-1:0] BOOT_ADDR
+  , input                     CLK
+  , input                     RSTN
 );
 
 // Instruction Queue
-wire                    inst_q_wen;
-wire [INST_Q_WIDTH-1:0] inst_q_wdata;
-wire                    inst_q_wok;
-wire                    inst_q_ren;
-wire [INST_Q_WIDTH-1:0] inst_q_rdata;
-wire                    inst_q_rok;
-wire                    inst_q_flush;
+wire                     inst_q_wen;
+wire [ INST_Q_WIDTH-1:0] inst_q_wdata;
+wire                     inst_q_wok;
+wire                     inst_q_ren;
+wire [ INST_Q_WIDTH-1:0] inst_q_rdata;
+wire                     inst_q_rok;
+wire                     inst_q_flush;
 
 // Instruction Decoder
-wire                      inst_q_taken;
-wire [    ADDR_WIDTH-1:0] inst_q_nxt_pc;
-wire [    ADDR_WIDTH-1:0] inst_q_cur_pc;
-wire [    DATA_WIDTH-1:0] inst_q_inst;
+wire                     inst_q_taken;
+wire [   ADDR_WIDTH-1:0] inst_q_nxt_pc;
+wire [   ADDR_WIDTH-1:0] inst_q_cur_pc;
+wire [   DATA_WIDTH-1:0] inst_q_inst;
 
 // Issue Queue
 wire                     issue_q_wen;
 wire [ISSUE_Q_WIDTH-1:0] issue_q_wdata;
 wire                     issue_q_wok;
-wire                     issue_q_ren;
-wire [ISSUE_Q_WIDTH-1:0] issue_q_rdata;
-wire                     issue_q_rok;
 wire                     issue_q_flush;
 
 //===============================================

@@ -1,5 +1,3 @@
-`include "../Decoder/DefineType.v"
-
 module InstPreDecoder #(
    parameter ADDR_WIDTH = 32
 )(

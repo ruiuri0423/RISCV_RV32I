@@ -1,6 +1,8 @@
 module SyncQueue #(
-   parameter WIDTH = 31
-  ,parameter DEPTH = 4
+   parameter WIDTH   = 31
+  ,parameter DEPTH   = 4
+  ,parameter OUT_REG = 0
+  //-----------------------
   ,parameter DEPTH_LOG2 = $clog2(DEPTH)
 )(
   // output
@@ -20,26 +22,30 @@ module SyncQueue #(
 // Queue Pointer
 wire                  sync_q_inc;
 wire                  sync_q_dec;
-wire [DEPTH_LOG2-1:0] sync_q_cnt_n;
-reg  [DEPTH_LOG2-1:0] sync_q_cnt;
+wire [DEPTH_LOG2  :0] sync_q_cnt_n;
+reg  [DEPTH_LOG2  :0] sync_q_cnt;
 
+wire                  sync_q_rmax;
 wire                  sync_q_rinc;
-wire [DEPTH_LOG2  :0] sync_q_rptr_n;
-reg  [DEPTH_LOG2  :0] sync_q_rptr; 
+wire [DEPTH_LOG2-1:0] sync_q_rptr_n;
+reg  [DEPTH_LOG2-1:0] sync_q_rptr; 
 
+wire                  sync_q_wmax;
 wire                  sync_q_winc;
-wire [DEPTH_LOG2  :0] sync_q_wptr_n;
-reg  [DEPTH_LOG2  :0] sync_q_wptr;
+wire [DEPTH_LOG2-1:0] sync_q_wptr_n;
+reg  [DEPTH_LOG2-1:0] sync_q_wptr;
 
 assign sync_q_inc    = sync_q_winc;
 assign sync_q_dec    = sync_q_rinc;
 assign sync_q_cnt_n  = sync_q_cnt + sync_q_inc - sync_q_dec;
 
 assign sync_q_rinc   = sync_q_rok & sync_q_ren;
-assign sync_q_rptr_n = sync_q_rptr + 1'd1;
+assign sync_q_rmax   = sync_q_rptr == (DEPTH - 1);
+assign sync_q_rptr_n = sync_q_rmax ? 'd0 : (sync_q_rptr + 1'd1);
 
 assign sync_q_winc   = sync_q_wok & sync_q_wen;
-assign sync_q_wptr_n = sync_q_wptr + 1'd1;
+assign sync_q_wmax   = sync_q_wptr == (DEPTH - 1);
+assign sync_q_wptr_n = sync_q_wmax ? 'd0 : (sync_q_wptr + 1'd1);
 
 always @(posedge CLK or negedge RSTN)
   begin
@@ -83,6 +89,26 @@ always @(posedge CLK)
 // Queue Output
 assign sync_q_rok   = sync_q_cnt > 0;
 assign sync_q_wok   = sync_q_cnt < DEPTH;
-assign sync_q_rdata = sync_q_mem[sync_q_rptr];
+
+generate
+  begin : GEN_OUT_REG
+    if (OUT_REG == 1)
+      begin
+        reg [WIDTH-1:0] sync_q_rdata_reg;
+
+        assign sync_q_rdata = sync_q_rdata_reg;
+        
+        always @(posedge CLK or negedge RSTN)
+          begin
+            if (~RSTN)
+              sync_q_rdata_reg <= 'd0;
+            else if (sync_q_rinc)
+              sync_q_rdata_reg <= sync_q_mem[sync_q_rptr];
+          end
+      end
+    else
+      assign sync_q_rdata = sync_q_mem[sync_q_rptr];
+  end
+endgenerate
 
 endmodule
