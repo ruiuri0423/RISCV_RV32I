@@ -23,7 +23,7 @@
 ../RTL/Frontend/InstPcGen.v
 ../RTL/Frontend/InstBranchPredict.v
 ../RTL/Frontend/InstFetch.v
-../RTL/Frontend/FrontEnd.v
+../RTL/Frontend/Frontend.v
 ../RTL/Misc/SyncQueue.v
 ../RTL/AxiBus/AxiMasterWrapper.v
 ../RTL/Misc/Parameterized_RR_Arbiter.v
@@ -31,3 +31,4 @@
 ../RTL/Backend/RegisterAliasTable.v
 ../RTL/Backend/ReorderBuffer.v
 ../RTL/Backend/InstIssuer.v
+../RTL/Backend/Backend.v
