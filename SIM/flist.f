@@ -26,3 +26,8 @@
 ../RTL/Frontend/FrontEnd.v
 ../RTL/Misc/SyncQueue.v
 ../RTL/AxiBus/AxiMasterWrapper.v
+../RTL/Misc/Parameterized_RR_Arbiter.v
+../RTL/Backend/CommonDataBus.v
+../RTL/Backend/RegisterAliasTable.v
+../RTL/Backend/ReorderBuffer.v
+../RTL/Backend/InstIssuer.v

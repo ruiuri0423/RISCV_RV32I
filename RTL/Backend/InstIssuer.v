@@ -2,6 +2,7 @@ module InstIssuer #(
    parameter ROB_ENTRY      = 4
   ,parameter ARCH_ENTRY     = 32
   ,parameter DATA_WIDTH     = 32
+  ,parameter ISSUE_Q_WIDTH  = 123
   //-----------------------
   ,parameter ARCH_ENTRY_LOG2 = $clog2(ARCH_ENTRY)
   ,parameter ROB_ENTRY_LOG2  = $clog2( ROB_ENTRY)
@@ -50,23 +51,46 @@ module InstIssuer #(
   ,output [ARCH_ENTRY_LOG2-1:0] rob_arch_id
   , input                       rob_grant
   , input [ ROB_ENTRY_LOG2-1:0] rob_alias_id
-  // Common Data Bus
-  ,output                       cdb_lsn_request
-  ,output [ ROB_ENTRY_LOG2-1:0] cdb_lsn_id
-  , input [     DATA_WIDTH-1:0] cdb_lsn_data
-  , input                       cdb_lsn_hit
+  // Common Data Bus: RS1/Fetch
+  ,output                       cdb_lsn_request_rs1_fetch
+  ,output [ ROB_ENTRY_LOG2-1:0] cdb_lsn_id_rs1_fetch
+  , input [     DATA_WIDTH-1:0] cdb_lsn_data_rs1_fetch
+  , input                       cdb_lsn_hit_rs1_fetch
+  // Common Data Bus: RS2/Fetch
+  ,output                       cdb_lsn_request_rs2_fetch
+  ,output [ ROB_ENTRY_LOG2-1:0] cdb_lsn_id_rs2_fetch
+  , input [     DATA_WIDTH-1:0] cdb_lsn_data_rs2_fetch
+  , input                       cdb_lsn_hit_rs2_fetch
+  // Common Data Bus: RS1/Issue
+  ,output                       cdb_lsn_request_rs1_issue
+  ,output [ ROB_ENTRY_LOG2-1:0] cdb_lsn_id_rs1_issue
+  , input [     DATA_WIDTH-1:0] cdb_lsn_data_rs1_issue
+  , input                       cdb_lsn_hit_rs1_issue
+  // Common Data Bus: RS2/Issue
+  ,output                       cdb_lsn_request_rs2_issue
+  ,output [ ROB_ENTRY_LOG2-1:0] cdb_lsn_id_rs2_issue
+  , input [     DATA_WIDTH-1:0] cdb_lsn_data_rs2_issue
+  , input                       cdb_lsn_hit_rs2_issue
+  // Arch. Register: RS1
+  ,output [] arch_reg_rs1
+  ,output    arch_reg_ren_rs1
+  , input [] arch_reg_data_rs1
+  // Arch. Register: RS2
+  ,output [] arch_reg_rs2
+  ,output    arch_reg_ren_rs2
+  , input [] arch_reg_data_rs2
   // Issue Queue
-  ,output    issue_q_ren
-  , input    issue_q_rok
-  , input [] issue_q_rdata
+  ,output                       issue_q_ren
+  , input                       issue_q_rok
+  , input [  ISSUE_Q_WIDTH-1:0] issue_q_rdata
   // Function Unit
-  , input    alu_wok
-  , input    lsu_wok
-  , input    bpu_wok
-  , input    csr_wok
+  , input                       alu_wok
+  , input                       lsu_wok
+  , input                       bpu_wok
+  , input                       csr_wok
   //
-  , input    CLK
-  , input    RSTN
+  , input                       CLK
+  , input                       RSTN
 );
 
 // Parameters (Begin)
@@ -115,11 +139,13 @@ reg                        disp_rem;
 wire                       disp_rok;
 wire                       disp_wok;
 
-reg [] disp_rs1_data;   // From register file
-reg [] disp_rs2_data;   // From register file
-reg [] disp_rs1_depend; // Address by RAT
-reg [] disp_rs2_depend; // Address by RAT
-reg [] disp_rob_entry;  // Allocated in ROB
+reg [DATA_WIDTH      -1:0] disp_rs1_data;   // From register file
+reg [DATA_WIDTH      -1:0] disp_rs2_data;   // From register file
+reg                        disp_rs1_depend;
+reg                        disp_rs2_depend;
+reg [ROB_ENTRY_LOG2  -1:0] disp_rs1_alias; // Address by RAT
+reg [ROB_ENTRY_LOG2  -1:0] disp_rs2_alias; // Address by RAT
+reg [ROB_ENTRY_LOG2  -1:0] disp_rob_entry;  // Allocated in ROB
 
 wire                       rat_busy_rs1;
 wire                       rat_busy_rs2;
@@ -191,10 +217,17 @@ always @(posedge CLK or negedge RSTN)
         disp_rs1_data <= 'd0;    // From register file
         disp_rs2_data <= 'd0;    // From register file
       end
-    else if ()
+    else
       begin
-        disp_rs1_data <= ;    // From register file
-        disp_rs2_data <= ;    // From register file
+        disp_rs1_data <= cdb_lsn_hit_rs1_fetch ? cdb_lsn_data_rs1_fetch :
+                              arch_reg_ren_rs1 ?      arch_reg_data_rs1 :
+                         cdb_lsn_hit_rs1_issue ? cdb_lsn_data_rs1_issue :
+                                                          disp_rs1_data ; // From register file
+
+        disp_rs2_data <= cdb_lsn_hit_rs2_fetch ? cdb_lsn_data_rs2_fetch :
+                              arch_reg_ren_rs2 ?      arch_reg_data_rs2 :
+                         cdb_lsn_hit_rs2_issue ? cdb_lsn_data_rs2_issue :
+                                                          disp_rs2_data ; // From register file
       end
   end
 
@@ -202,13 +235,21 @@ always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
       begin
-        disp_rs1_depend <= 'd0;    // Address by RAT
-        disp_rs2_depend <= 'd0;    // Address by RAT
+        disp_rs1_depend <= 'd0;
+        disp_rs2_depend <= 'd0;
+        disp_rs1_alias  <= 'd0;    // Address by RAT
+        disp_rs2_alias  <= 'd0;    // Address by RAT
       end
     else
       begin
-        disp_rs1_depend <= rat_busy_rs1 ? rat_result_alias_rs1 : disp_rs1_depend;    // Address by RAT
-        disp_rs2_depend <= rat_busy_rs2 ? rat_result_alias_rs2 : disp_rs2_depend;    // Address by RAT
+        disp_rs1_depend <= (rat_busy_rs1 & ~cdb_lsn_hit_rs1_fetch) ? 'd1 : 
+                           (  disp_issue |  cdb_lsn_hit_rs1_issue) ? 'd0 : disp_rs1_depend;
+
+        disp_rs2_depend <= (rat_busy_rs2 & ~cdb_lsn_hit_rs2_fetch) ? 'd1 : 
+                           (  disp_issue |  cdb_lsn_hit_rs2_issue) ? 'd0 : disp_rs2_depend;
+
+        disp_rs1_alias  <= rat_busy_rs1 ? rat_result_alias_rs1 : disp_rs1_alias;    // Address by RAT
+        disp_rs2_alias  <= rat_busy_rs2 ? rat_result_alias_rs2 : disp_rs2_alias;    // Address by RAT
       end
   end
 
@@ -283,13 +324,30 @@ always @(posedge CLK or negedge RSTN)
 
 //===============================================
 // If hit the RAW, listen the common data bus. 
+// dependency ? | listened before issue ? | listening at issue ?
+//              | -> dependency cleared.  | -> dependency clearing and 
+//                                        |    sent the listening data.
 //===============================================
-assign cdb_lsn_request = 
-assign cdb_lsn_id      = 
+assign cdb_lsn_request_rs1_fetch = rat_busy_rs1;
+assign cdb_lsn_id_rs1_fetch      = rat_result_alias_rs2;
+
+assign cdb_lsn_request_rs2_fetch = rat_busy_rs2;
+assign cdb_lsn_id_rs2_fetch      = rat_result_alias_rs2;
+
+assign cdb_lsn_request_rs1_issue = disp_rs1_depend;
+assign cdb_lsn_id_rs1_issue      = disp_rs1_alias;
+
+assign cdb_lsn_request_rs2_issue = disp_rs2_depend;
+assign cdb_lsn_id_rs2_issue      = disp_rs2_alias;
 
 //===============================================
 // Instruction Issuing
 //===============================================
 assign isr_valid = 
+assign isr_rs1_data = cdb_lsn_hit_rs1_issue & disp_issue ? 
+                      cdb_lsn_data_rs1_issue : disp_rs1_data;
+
+assign isr_rs2_data = cdb_lsn_hit_rs2_issue & disp_issue ? 
+                      cdb_lsn_data_rs2_issue : disp_rs2_data;
 
 endmodule
