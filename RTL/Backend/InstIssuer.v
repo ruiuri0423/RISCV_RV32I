@@ -33,8 +33,8 @@ module InstIssuer #(
   ,output [DATA_WIDTH     -1:0] isr_cur_pc
   ,output [DATA_WIDTH     -1:0] isr_rs1_data
   ,output [DATA_WIDTH     -1:0] isr_rs2_data
-  ,output [ROB_ENTRY_LOG2 -1:0] isr_rs1_depend
-  ,output [ROB_ENTRY_LOG2 -1:0] isr_rs2_depend
+  ,output [ROB_ENTRY_LOG2 -1:0] isr_rs1_alias
+  ,output [ROB_ENTRY_LOG2 -1:0] isr_rs2_alias
   ,output [ROB_ENTRY_LOG2 -1:0] isr_rob_entry
   // Register Alias Table: RS1
   ,output                       rat_query_request_rs1
@@ -72,13 +72,13 @@ module InstIssuer #(
   , input [     DATA_WIDTH-1:0] cdb_lsn_data_rs2_issue
   , input                       cdb_lsn_hit_rs2_issue
   // Arch. Register: RS1
-  ,output [] arch_reg_rs1
-  ,output    arch_reg_ren_rs1
-  , input [] arch_reg_data_rs1
+  ,output [ARCH_ENTRY_LOG2-1:0] arch_reg_rs1
+  ,output                       arch_reg_ren_rs1
+  , input [     DATA_WIDTH-1:0] arch_reg_data_rs1
   // Arch. Register: RS2
-  ,output [] arch_reg_rs2
-  ,output    arch_reg_ren_rs2
-  , input [] arch_reg_data_rs2
+  ,output [ARCH_ENTRY_LOG2-1:0] arch_reg_rs2
+  ,output                       arch_reg_ren_rs2
+  , input [     DATA_WIDTH-1:0] arch_reg_data_rs2
   // Issue Queue
   ,output                       issue_q_ren
   , input                       issue_q_rok
@@ -299,13 +299,22 @@ assign issue_q_ren = disp_fetch;
 //===============================================
 // Register Alias Table Checks
 //===============================================
-assign rat_busy_rs1 = rat_query_request_rs1 & rat_result_busy_rs1;
+assign rat_busy_rs1          = rat_query_request_rs1 & rat_result_busy_rs1;
 assign rat_query_request_rs1 = disp_fetch;
 assign rat_query_arch_id_rs1 = disp_rs1_nxt;
 
-assign rat_busy_rs2 = rat_query_request_rs2 & rat_result_busy_rs2;
+assign rat_busy_rs2          = rat_query_request_rs2 & rat_result_busy_rs2;
 assign rat_query_request_rs2 = disp_fetch;
 assign rat_query_arch_id_rs2 = disp_rs2_nxt;
+
+//===============================================
+// Architecture Register File Checks
+//===============================================
+assign arch_reg_rs1     = disp_rs1_nxt;
+assign arch_reg_ren_rs1 = disp_fetch;
+
+assign arch_reg_rs2     = disp_rs2_nxt;
+assign arch_reg_ren_rs2 = disp_fetch;
 
 //===============================================
 // Reorder Buffer Checks
@@ -343,11 +352,23 @@ assign cdb_lsn_id_rs2_issue      = disp_rs2_alias;
 //===============================================
 // Instruction Issuing
 //===============================================
-assign isr_valid = 
-assign isr_rs1_data = cdb_lsn_hit_rs1_issue & disp_issue ? 
-                      cdb_lsn_data_rs1_issue : disp_rs1_data;
-
-assign isr_rs2_data = cdb_lsn_hit_rs2_issue & disp_issue ? 
-                      cdb_lsn_data_rs2_issue : disp_rs2_data;
+assign isr_valid      = disp_issue; 
+assign isr_function   = disp_function;
+assign isr_operator   = disp_operator;
+assign isr_oprand     = disp_oprand;
+assign isr_imm        = disp_imm;
+assign isr_taken      = disp_taken;
+assign isr_nxt_pc     = disp_nxt_pc;
+assign isr_cur_pc     = disp_cur_pc;
+//--                  
+assign isr_rs1_data   = cdb_lsn_hit_rs1_issue & disp_issue ? 
+                        cdb_lsn_data_rs1_issue : disp_rs1_data;
+                      
+assign isr_rs2_data   = cdb_lsn_hit_rs2_issue & disp_issue ? 
+                        cdb_lsn_data_rs2_issue : disp_rs2_data;
+//--
+assign isr_rs1_alias  = cdb_lsn_request_rs1_issue & ~cdb_lsn_hit_rs1_issue ? disp_rs1_alias : 'd0;
+assign isr_rs2_alias  = cdb_lsn_request_rs2_issue & ~cdb_lsn_hit_rs2_issue ? disp_rs2_alias : 'd0;
+assign isr_rob_entry  = disp_rob_entry;
 
 endmodule
