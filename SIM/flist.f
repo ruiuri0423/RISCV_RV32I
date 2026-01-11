@@ -32,3 +32,4 @@
 ../RTL/Backend/ReorderBuffer.v
 ../RTL/Backend/InstIssuer.v
 ../RTL/Backend/Backend.v
+../RTL/Core/Core.v

@@ -48,7 +48,7 @@ reg  [BHT_WIDTH-1:0] bht_queue_spec; // speculative queue
 reg  [          1:0] bht_counter [BHT_DEPTH-1:0]; // 2-bit saturate counter
 
 // Counter index : gshare
-wire [BHT_WIDTH-1:0] bht_bpu_idx = bht_queue      ^ bpu_pc  [BTB_WIDTH+:BHT_WIDTH];
+wire [BHT_WIDTH-1:0] bht_bpu_idx = bht_queue      ^ bpu_pc [BTB_WIDTH+:BHT_WIDTH];
 wire [BHT_WIDTH-1:0] bht_pc_idx  = bht_queue_spec ^ inst_pc[BTB_WIDTH+:BHT_WIDTH];
 
 // Speculative taken

@@ -1,7 +1,21 @@
 module Backend #(
-   parameter ROB_ENTRY       = 4
-  ,parameter ARCH_ENTRY      = 32
+   parameter ID_WIDTH        = 4 
+  ,parameter ADDR_WIDTH      = 32
+  ,parameter LEN_WIDTH       = 8
+  ,parameter SIZE_WIDTH      = 4
+  ,parameter BURST_WIDTH     = 2
+  ,parameter LOCK_WIDTH      = 1
+  ,parameter CACHE_WIDTH     = 4
+  ,parameter PROT_WIDTH      = 3
+  ,parameter QOS_WIDTH       = 4
+  ,parameter REGION_WIDTH    = 4
+  ,parameter USER_WIDTH      = 32
   ,parameter DATA_WIDTH      = 32
+  ,parameter STRB_WIDTH      = 4
+  ,parameter RESP_WIDTH      = 2
+  //-----------------------
+  ,parameter ROB_ENTRY       = 4
+  ,parameter ARCH_ENTRY      = 32
   ,parameter ISSUE_Q_WIDTH   = 123
   ,parameter QUERY_PORT      = 2
   ,parameter ISSUER          = 4
@@ -15,13 +29,70 @@ module Backend #(
   ,parameter OPERATOR_TYPES  = $clog2(10)
   ,parameter OPERAND_TYPES   = $clog2( 4)
 )(
+  // AW Channel
+    input                     m_axi_awready  
+  ,output                     m_axi_awvalid  
+  ,output [   ADDR_WIDTH-1:0] m_axi_awaddr   
+  ,output [   PROT_WIDTH-1:0] m_axi_awprot   
+  ,output [     ID_WIDTH-1:0] m_axi_awid    
+  ,output [    LEN_WIDTH-1:0] m_axi_awlen   
+  ,output [   SIZE_WIDTH-1:0] m_axi_awsize  
+  ,output [  BURST_WIDTH-1:0] m_axi_awburst 
+  ,output [   LOCK_WIDTH-1:0] m_axi_awlock  
+  ,output [  CACHE_WIDTH-1:0] m_axi_awcache 
+  ,output [    QOS_WIDTH-1:0] m_axi_awqos   
+  ,output [ REGION_WIDTH-1:0] m_axi_awregion
+  ,output [   USER_WIDTH-1:0] m_axi_awuser
+  // W Channel
+  , input                     m_axi_wready
+  ,output                     m_axi_wvalid
+  ,output [   DATA_WIDTH-1:0] m_axi_wdata
+  ,output [   STRB_WIDTH-1:0] m_axi_wstrb
+  ,output                     m_axi_wlast
+  ,output [   USER_WIDTH-1:0] m_axi_wuser    
+  // B Channel
+  ,output                     m_axi_bready
+  , input                     m_axi_bvalid
+  , input [   RESP_WIDTH-1:0] m_axi_bresp
+  , input [     ID_WIDTH-1:0] m_axi_bid
+  , input [   USER_WIDTH-1:0] m_axi_buser
+  // AR Channel
+  , input                     m_axi_arready
+  ,output                     m_axi_arvalid  
+  ,output [   ADDR_WIDTH-1:0] m_axi_araddr
+  ,output [   PROT_WIDTH-1:0] m_axi_arprot
+  ,output [     ID_WIDTH-1:0] m_axi_arid    
+  ,output [    LEN_WIDTH-1:0] m_axi_arlen   
+  ,output [   SIZE_WIDTH-1:0] m_axi_arsize  
+  ,output [  BURST_WIDTH-1:0] m_axi_arburst 
+  ,output [   LOCK_WIDTH-1:0] m_axi_arlock  
+  ,output [  CACHE_WIDTH-1:0] m_axi_arcache 
+  ,output [    QOS_WIDTH-1:0] m_axi_arqos   
+  ,output [ REGION_WIDTH-1:0] m_axi_arregion
+  ,output [   USER_WIDTH-1:0] m_axi_aruser   
+  // R Channel
+  ,output                     m_axi_rready
+  , input                     m_axi_rvalid
+  , input [   DATA_WIDTH-1:0] m_axi_rdata
+  , input [   RESP_WIDTH-1:0] m_axi_rresp
+  , input [     ID_WIDTH-1:0] m_axi_rid  
+  , input                     m_axi_rlast
+  , input [   USER_WIDTH-1:0] m_axi_ruser
+  // BPU
+  ,output                     bpu_valid  
+  ,output                     bpu_flush
+  ,output [   ADDR_WIDTH-1:0] bpu_target
+  ,output                     bpu_taken
+  ,output                     bpu_call
+  ,output                     bpu_ret
+  ,output [   ADDR_WIDTH-1:0] bpu_pc
   // Issue Queue
-   output                       issue_q_ren
-  , input                       issue_q_rok
-  , input [  ISSUE_Q_WIDTH-1:0] issue_q_rdata
+  ,output                     issue_q_ren
+  , input                     issue_q_rok
+  , input [ISSUE_Q_WIDTH-1:0] issue_q_rdata
   //
-  , input                       CLK
-  , input                       RSTN
+  , input                     CLK
+  , input                     RSTN
 );
 
 // Issue Instruction
