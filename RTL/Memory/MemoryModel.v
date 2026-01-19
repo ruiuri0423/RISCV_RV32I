@@ -2,7 +2,7 @@ module MemoryModel #(
      parameter BYTE_WIDTH = 8
     ,parameter DATA_WIDTH = 32
     ,parameter DATA_DEPTH = 1024
-    ,parameter ADDR_WIDTH = 10
+    ,parameter ADDR_WIDTH = $clog2(DATA_DEPTH)
     ,parameter STRB_WIDTH = DATA_WIDTH / BYTE_WIDTH
 )(
      output reg  [DATA_WIDTH-1:0] mem_rdata
