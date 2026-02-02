@@ -106,7 +106,7 @@ assign pc_taken = bp_taken;
 always @(posedge CLK or negedge RSTN)
   begin 
     if (~RSTN)
-      pc_inc_4 <= BOOT_ADDR + 'd4;
+      pc_inc_4 <= BOOT_ADDR;
     else if (inst_valid)
       pc_inc_4 <= pc_out + 'd4;
   end
