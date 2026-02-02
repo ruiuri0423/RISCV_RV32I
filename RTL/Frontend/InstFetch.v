@@ -1,3 +1,6 @@
+`timescale 1ps / 1ps
+`define REGDLY 100
+
 module InstFetch_ #(
    parameter DATA_WIDTH   = 32
   ,parameter ADDR_WIDTH   = 32
@@ -113,40 +116,40 @@ assign req_trig      = ~req_flag & m_axi_arvalid;
 always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
-      req_boot <= 'd1;
+      req_boot <= #`REGDLY 'd1;
     else if (m_axi_arhsk)
-      req_boot <= 'd0;
+      req_boot <= #`REGDLY 'd0;
   end
 
 always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
-      req_sent <= 'd0;
+      req_sent <= #`REGDLY 'd0;
     else if (m_axi_arhsk)
-      req_sent <= 'd1;
+      req_sent <= #`REGDLY 'd1;
     else if (m_axi_rhsk | m_axi_rerr)
-      req_sent <= 'd0;
+      req_sent <= #`REGDLY 'd0;
   end
 
 always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
-      req_flag <= 'd0;
+      req_flag <= #`REGDLY 'd0;
     else
-      req_flag <= m_axi_arvalid;
+      req_flag <= #`REGDLY m_axi_arvalid;
   end
 
 always @(posedge CLK or negedge RSTN)
   begin
     if (~RSTN)
       begin
-        req_pc       <= 'd0;
-        req_pc_taken <= 'd0;
+        req_pc       <= #`REGDLY 'd0;
+        req_pc_taken <= #`REGDLY 'd0;
       end
     else if (req_trig | m_axi_rhsk)
       begin
-        req_pc       <= m_axi_araddr;
-        req_pc_taken <= pc_taken; 
+        req_pc       <= #`REGDLY m_axi_araddr;
+        req_pc_taken <= #`REGDLY pc_taken; 
       end
   end
 

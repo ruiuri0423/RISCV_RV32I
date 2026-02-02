@@ -18,6 +18,8 @@
 ../RTL/FiveStageCore/WriteBack/WriteBack.v
 ../RTL/FiveStageCore/CoreBus/CoreBus.v
 ../RTL/Memory/MemoryModel.v
+../RTL/Memory/blk_mem_gen_0.v
+../RTL/Memory/blk_mem_gen_v8_4.v
 ../RTL/Frontend/InstDecoder.v
 ../RTL/Frontend/InstPreDecoder.v
 ../RTL/Frontend/InstPcGen.v

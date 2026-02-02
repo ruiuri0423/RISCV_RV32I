@@ -76,7 +76,7 @@ module testbench();
     logic [  DATA_WIDTH-1:0] u_rd_data;
     logic                    u_rd_wen;
     logic                    u_rd_gnt;
-    logic                    u_rd_wok  = 0;
+    logic                    u_rd_wok  = 1;
     logic                    u_rd_req  = 0;
     logic [   LEN_WIDTH-1:0] u_rd_len  = 0;
     logic [  ADDR_WIDTH-1:0] u_rd_addr = 0;
@@ -89,6 +89,8 @@ module testbench();
     string hex;
     int fcheck;
     int freturn;
+
+    int i;
 
     initial forever clk = #(`CLK/2) ~clk;
     initial forever m_aclk = #(`CLK/2) ~m_aclk;
@@ -133,50 +135,31 @@ module testbench();
         //join_any
 
         // Simulation the AXI SRAM behavior
-        @(posedge m_aclk);
-        u_wr_rok  = 'd1;
-        u_wr_req  = 'd1;
-        u_wr_len  = 'd1;
-        u_wr_addr = 'h0000_0004;
-        u_wr_data = 'hAA55_AA55;
-        u_wr_strb = {(STRB_WIDTH){1'b1}};
-        fork
-            begin
-                wait (u_wr_gnt);
-                @(posedge m_aclk);
-                u_wr_rok  = 'd0;
-                u_wr_req  = 'd0;
-                u_wr_len  = 'd0;
-                u_wr_addr = 'h0000_0000;
-            end
-            begin
-                wait (u_wr_ren);
-                u_wr_data = 'h0000_0000;
-                u_wr_strb = {(STRB_WIDTH){1'b0}};
-            end
-        join
-
-        @(posedge m_aclk);
-        u_rd_wok  = 'd1;
-        u_rd_req  = 'd1;
-        u_rd_len  = 'd1;
-        u_rd_addr = 'h0000_0004;
-        fork
-            begin
-                wait (u_rd_gnt);
-                @(posedge m_aclk);
-                u_rd_wok  = 'd0;
-                u_rd_req  = 'd0;
-                u_rd_len  = 'd0;
-                u_rd_addr = 'h0000_0000;
-            end
-            begin
-                wait (u_rd_wen);
-                $display("AXI read data is: %x", u_rd_data);
-            end
-        join
+        //for (i=0; i<1024; i=i+4) begin
+        //    @(posedge m_aclk);
+        //    #1;
+        //    u_rd_req  = 'd1;
+        //    u_rd_len  = 'd1;
+        //    u_rd_addr = 'h0000_0000 + i;
+        //    fork
+        //        begin
+        //            wait (u_rd_gnt);
+        //            @(posedge m_aclk);
+        //            #1;
+        //            u_rd_req  = 'd0;
+        //            u_rd_len  = 'd0;
+        //            u_rd_addr = 'h0000_0000 + i;
+        //        end
+        //        begin
+        //            wait (u_rd_wen);
+        //            @(posedge m_aclk);
+        //            #1;
+        //            $display("AXI read addr is %x, data is: %x", u_rd_addr, u_rd_data);
+        //        end
+        //    join
+        //end
         
-        #10000;
+        #1000;
         $finish;
     end
 
@@ -261,13 +244,13 @@ module testbench();
       .s_axi_bresp   ( m_axi_bresp         ),  // output wire [1 : 0] s_axi_bresp
       .s_axi_bvalid  ( m_axi_bvalid        ),  // output wire s_axi_bvalid
       .s_axi_bready  ( m_axi_bready        ),  // input wire s_axi_bready
-      .s_axi_araddr  ( m_axi_araddr        ),  // input wire [31 : 0] s_axi_araddr
-      .s_axi_arvalid ( m_axi_arvalid       ),  // input wire s_axi_arvalid
-      .s_axi_arready ( m_axi_arready       ),  // output wire s_axi_arready
-      .s_axi_rdata   ( m_axi_rdata         ),  // output wire [31 : 0] s_axi_rdata
-      .s_axi_rresp   ( m_axi_rresp         ),  // output wire [1 : 0] s_axi_rresp
-      .s_axi_rvalid  ( m_axi_rvalid        ),  // output wire s_axi_rvalid
-      .s_axi_rready  ( m_axi_rready        )   // input wire s_axi_rready
+      .s_axi_araddr  ( m_axi_araddr_fe     ),  // input wire [31 : 0] s_axi_araddr
+      .s_axi_arvalid ( m_axi_arvalid_fe    ),  // input wire s_axi_arvalid
+      .s_axi_arready ( m_axi_arready_fe    ),  // output wire s_axi_arready
+      .s_axi_rdata   ( m_axi_rdata_fe      ),  // output wire [31 : 0] s_axi_rdata
+      .s_axi_rresp   ( m_axi_rresp_fe      ),  // output wire [1 : 0] s_axi_rresp
+      .s_axi_rvalid  ( m_axi_rvalid_fe     ),  // output wire s_axi_rvalid
+      .s_axi_rready  ( m_axi_rready_fe     )   // input wire s_axi_rready
     );
 
     Core #(
